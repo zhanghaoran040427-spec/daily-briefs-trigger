@@ -1,0 +1,72 @@
+name: Dispatch Daily Briefs
+
+# 这个公开仓库只有一个作用：每天定时调用私有仓库 daily-briefs 的 workflow_dispatch。
+# 里面没有任何个人数据；访问私有仓库用的 token 放在本仓库的 Actions secret 里。
+
+on:
+  schedule:
+    # UTC 时间：23:30 UTC = 北京时间次日 07:30（四封晨报）
+    - cron: "30 23 * * *"
+    # UTC 时间：13:35 UTC = 北京时间 21:35（持仓报告，程序自己判断是否交易日）
+    - cron: "35 13 * * *"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "触发哪一份（测试用）"
+        required: true
+        default: "morning"
+        type: choice
+        options:
+          - morning
+          - evening
+      dry_run:
+        description: "只生成 HTML，不发邮件（测试用）"
+        required: false
+        default: false
+        type: boolean
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: dispatch-daily-briefs
+      cancel-in-progress: false
+    steps:
+      - name: Trigger morning briefs
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'morning' || github.event.schedule == '30 23 * * *'
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          BODY='{"ref":"main"}'
+          if [ "$DRY_RUN" = "true" ]; then
+            BODY='{"ref":"main","inputs":{"dry_run":"true"}}'
+          fi
+          curl -sS --fail --retry 3 --retry-all-errors -X POST \
+            -H "Authorization: Bearer $DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/zhanghaoran040427-spec/daily-briefs/actions/workflows/morning-briefs.yml/dispatches" \
+            -d "$BODY"
+          echo "morning briefs dispatched"
+
+      - name: Trigger evening report
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'evening' || github.event.schedule == '35 13 * * *'
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          BODY='{"ref":"main"}'
+          if [ "$DRY_RUN" = "true" ]; then
+            BODY='{"ref":"main","inputs":{"dry_run":"true"}}'
+          fi
+          curl -sS --fail --retry 3 --retry-all-errors -X POST \
+            -H "Authorization: Bearer $DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/zhanghaoran040427-spec/daily-briefs/actions/workflows/daily-brief.yml/dispatches" \
+            -d "$BODY"
+          echo "evening report dispatched"
