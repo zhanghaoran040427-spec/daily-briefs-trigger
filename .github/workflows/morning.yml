@@ -15,7 +15,8 @@ on:
         default: false
         type: boolean
 
-permissions: {}
+permissions:
+  contents: write
 
 jobs:
   dispatch:
@@ -42,3 +43,15 @@ jobs:
             "https://api.github.com/repos/zhanghaoran040427-spec/daily-briefs/actions/workflows/morning-briefs.yml/dispatches" \
             -d "${body}"
           echo "morning briefs dispatched"
+
+      # 公开仓库 60 天没有提交时 GitHub 会自动停掉定时任务；每天提交一个小文件保持活跃
+      - name: Keep repository active
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .last-run
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .last-run
+          git commit -m "keepalive $(date -u +%F)" || exit 0
+          git push
