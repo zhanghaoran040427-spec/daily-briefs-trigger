@@ -5,8 +5,11 @@ name: Dispatch Morning Briefs
 
 on:
   # UTC：23:30 UTC = 北京时间次日 07:30
+  # 备用：00:00 UTC = 北京 08:00，准点那次哑了就由它兜底；
+  # 私有仓库里会查 state/sent.json，今天已经发过就直接跳过，不会重复发。
   schedule:
     - cron: "30 23 * * *"
+    - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

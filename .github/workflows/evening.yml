@@ -5,8 +5,11 @@ name: Dispatch Evening Report
 
 on:
   # UTC：13:35 UTC = 北京时间 21:35
+  # 备用：14:05 UTC = 北京 22:05，准点那次哑了就由它兜底；
+  # 私有仓库里会查 state/sent.json，今天已经发过就直接跳过，不会重复发。
   schedule:
     - cron: "35 13 * * *"
+    - cron: "5 14 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
