@@ -46,7 +46,7 @@ jobs:
 
       # 公开仓库 60 天没有提交时 GitHub 会自动停掉定时任务；每天提交一个小文件保持活跃
       - name: Keep repository active
-        if: github.event_name == 'schedule'
+        if: always() && github.event_name == 'schedule'
         continue-on-error: true
         run: |
           date -u +"%Y-%m-%dT%H:%M:%SZ" > .last-run
