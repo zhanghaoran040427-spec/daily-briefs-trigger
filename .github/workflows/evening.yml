@@ -1,0 +1,44 @@
+name: Dispatch Evening Report
+
+# 这个公开仓库只负责每天定时“敲一下”私有仓库 daily-briefs 的持仓报告工作流。
+# 里面没有任何个人数据；token 放在本仓库的 Actions secret DISPATCH_TOKEN 里。
+
+on:
+  # UTC：13:35 UTC = 北京时间 21:35
+  schedule:
+    - cron: "35 13 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "只生成 HTML，不发邮件（测试用）"
+        required: false
+        default: false
+        type: boolean
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: dispatch-evening
+      cancel-in-progress: false
+    steps:
+      - name: Trigger evening report
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          body='{"ref":"main"}'
+          if [ "${DRY_RUN}" = "true" ]; then
+            body='{"ref":"main","inputs":{"dry_run":"true"}}'
+          fi
+          curl -sS --fail --retry 3 --retry-all-errors -X POST \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/zhanghaoran040427-spec/daily-briefs/actions/workflows/daily-brief.yml/dispatches" \
+            -d "${body}"
+          echo "evening report dispatched"
