@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           body='{"ref":"main"}'
           if [ "${DRY_RUN}" = "true" ]; then
-            body='{"ref":"main","inputs":{"dry_run":"true"}}'
+            body='{"ref":"main","inputs":{"dry_run":true}}'
           fi
           curl -sS --fail --retry 3 --retry-all-errors -X POST \
             -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
