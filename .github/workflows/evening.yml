@@ -4,12 +4,8 @@ name: Dispatch Evening Report
 # 里面没有任何个人数据；token 放在本仓库的 Actions secret DISPATCH_TOKEN 里。
 
 on:
-  # UTC：13:35 UTC = 北京时间 21:35
-  # 备用：14:05 UTC = 北京 22:05，准点那次哑了就由它兜底；
-  # 私有仓库里会查 state/sent.json，今天已经发过就直接跳过，不会重复发。
-  schedule:
-    - cron: "35 13 * * *"
-    - cron: "5 14 * * *"
+  # 定时全部交给外部服务 cron-job.org（北京时间每天 21:35 调本工作流）。
+  # GitHub 自带的 schedule 实测每天迟到 2-8 小时，已删除，避免它抢在准点之前发出去。
   workflow_dispatch:
     inputs:
       dry_run:

@@ -4,12 +4,8 @@ name: Dispatch Morning Briefs
 # 里面没有任何个人数据；token 放在本仓库的 Actions secret DISPATCH_TOKEN 里。
 
 on:
-  # UTC：23:30 UTC = 北京时间次日 07:30
-  # 备用：00:00 UTC = 北京 08:00，准点那次哑了就由它兜底；
-  # 私有仓库里会查 state/sent.json，今天已经发过就直接跳过，不会重复发。
-  schedule:
-    - cron: "30 23 * * *"
-    - cron: "0 0 * * *"
+  # 定时全部交给外部服务 cron-job.org（北京时间每天 07:30 调本工作流）。
+  # GitHub 自带的 schedule 实测每天迟到 2-8 小时，已删除，避免它抢在准点之前发出去。
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,8 +14,7 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   dispatch:
@@ -44,15 +39,26 @@ jobs:
             -d "${body}"
           echo "morning briefs dispatched"
 
-      # 公开仓库 60 天没有提交时 GitHub 会自动停掉定时任务；每天提交一个小文件保持活跃
-      - name: Keep repository active
-        if: always() && github.event_name == 'schedule'
-        continue-on-error: true
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: dispatch-morning
+      cancel-in-progress: false
+    steps:
+      - name: Trigger morning briefs
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |
-          date -u +"%Y-%m-%dT%H:%M:%SZ" > .last-run
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .last-run
-          git commit -m "keepalive $(date -u +%F)" || exit 0
-          git push
+          set -euo pipefail
+          # 固定发"真发送"的请求：cron-job.org 的 body 里即使还留着 dry_run 也不影响。
+          body='{"ref":"main"}'
+          curl -sS --fail --retry 3 --retry-all-errors -X POST \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/zhanghaoran040427-spec/daily-briefs/actions/workflows/morning-briefs.yml/dispatches" \
+            -d "${body}"
+          echo "morning briefs dispatched"
 
