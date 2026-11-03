@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "只生成 HTML，不发邮件（测试用）"
+        description: "已忽略：想试运行请到私有仓库手动 Run workflow（勾 dry_run）"
         required: false
         default: false
         type: boolean
@@ -32,13 +32,10 @@ jobs:
       - name: Trigger morning briefs
         env:
           DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
+          # 固定发"真发送"的请求：cron-job.org 的 body 里即使还留着 dry_run 也不影响。
           body='{"ref":"main"}'
-          if [ "${DRY_RUN}" = "true" ]; then
-            body='{"ref":"main","inputs":{"dry_run":true}}'
-          fi
           curl -sS --fail --retry 3 --retry-all-errors -X POST \
             -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
@@ -58,3 +55,4 @@ jobs:
           git add .last-run
           git commit -m "keepalive $(date -u +%F)" || exit 0
           git push
+
